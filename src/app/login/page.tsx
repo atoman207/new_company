@@ -31,6 +31,34 @@ export default async function LoginPage() {
             新規会員登録
           </Link>
         </p>
+
+        {/* デモ用アカウント案内 */}
+        <div className="mt-6 rounded-xl border border-orange-200 bg-orange-50 p-4">
+          <h2 className="text-sm font-bold text-orange-800">
+            🔑 デモ用アカウント
+          </h2>
+          <p className="mt-1 text-xs text-orange-700">
+            以下のアカウントで機能をお試しいただけます。
+          </p>
+          <dl className="mt-3 space-y-2 text-sm">
+            <div className="rounded-lg bg-white px-3 py-2">
+              <dt className="text-xs font-bold text-slate-500">
+                管理者アカウント
+              </dt>
+              <dd className="mt-0.5 font-mono text-slate-800">
+                admin@example.com ／ admin1234
+              </dd>
+            </div>
+            <div className="rounded-lg bg-white px-3 py-2">
+              <dt className="text-xs font-bold text-slate-500">
+                一般会員アカウント
+              </dt>
+              <dd className="mt-0.5 font-mono text-slate-800">
+                taro@example.com ／ password123
+              </dd>
+            </div>
+          </dl>
+        </div>
       </div>
     </div>
   );

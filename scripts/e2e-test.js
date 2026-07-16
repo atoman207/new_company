@@ -106,7 +106,10 @@ async function run() {
   // ---------- 7. お気に入り登録 ----------
   try {
     await page.getByRole("button", { name: "お気に入りに追加" }).click();
-    await page.getByRole("button", { name: "お気に入り登録済み" }).waitFor();
+    // 楽観的UIで即座に表示が切り替わるため、ボタンが再度有効化される（＝サーバー処理完了）まで待つ
+    await page
+      .locator('button:not([disabled])', { hasText: "お気に入り登録済み" })
+      .waitFor();
     await page.goto(`${BASE}/mypage/favorites`);
     await page.getByText("麺屋 白樺").first().waitFor();
     ok("お気に入り登録 → マイページのお気に入り一覧に表示");

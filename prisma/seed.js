@@ -5,13 +5,23 @@ const bcrypt = require("bcryptjs");
 const prisma = new PrismaClient();
 
 async function main() {
-  // 既存データを削除（依存順）
-  await prisma.comment.deleteMany();
-  await prisma.favorite.deleteMany();
-  await prisma.review.deleteMany();
-  await prisma.store.deleteMany();
-  await prisma.category.deleteMany();
-  await prisma.user.deleteMany();
+  // SEED_RESET=1 を指定した場合のみ既存データを削除（依存順）
+  if (process.env.SEED_RESET === "1") {
+    await prisma.comment.deleteMany();
+    await prisma.favorite.deleteMany();
+    await prisma.review.deleteMany();
+    await prisma.store.deleteMany();
+    await prisma.category.deleteMany();
+    await prisma.user.deleteMany();
+  } else {
+    const existing = await prisma.category.count();
+    if (existing > 0) {
+      console.log(
+        "既にデータが存在するためスキップしました。上書きする場合は SEED_RESET=1 を指定して実行してください。"
+      );
+      return;
+    }
+  }
 
   // ---------------- カテゴリ ----------------
   const categoryData = [
