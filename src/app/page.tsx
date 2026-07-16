@@ -1,65 +1,155 @@
-import Image from "next/image";
+import Link from "next/link";
+import { prisma } from "@/lib/prisma";
+import { fetchStoresWithRating, sortStores, getCategories } from "@/lib/stores";
+import { formatDate, truncate } from "@/lib/utils";
+import SearchForm from "@/components/SearchForm";
+import StoreCard from "@/components/StoreCard";
+import RatingStars from "@/components/RatingStars";
+import { CATEGORY_EMOJI } from "@/lib/category-emoji";
 
-export default function Home() {
+export default async function HomePage() {
+  const [categories, stores, recentReviews] = await Promise.all([
+    getCategories(),
+    fetchStoresWithRating(),
+    prisma.review.findMany({
+      take: 4,
+      orderBy: { createdAt: "desc" },
+      include: {
+        user: { select: { name: true } },
+        store: { select: { id: true, name: true, published: true } },
+      },
+      where: { store: { published: true } },
+    }),
+  ]);
+
+  const topRated = sortStores(
+    stores.filter((s) => s.reviewCount > 0),
+    "rating"
+  ).slice(0, 6);
+  const newest = sortStores(stores, "new").slice(0, 6);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <div>
+      {/* ヒーローセクション */}
+      <section className="bg-gradient-to-br from-orange-500 via-orange-600 to-rose-500">
+        <div className="mx-auto max-w-6xl px-4 py-14 sm:py-20">
+          <h1 className="text-center text-3xl font-bold leading-snug text-white sm:text-4xl">
+            あなたの街の「行きつけ」が
+            <br className="sm:hidden" />
+            きっと見つかる
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="mt-4 text-center text-sm text-orange-50 sm:text-base">
+            口コミ・ランキング・詳細検索で、ぴったりのお店を探せる店舗情報ポータル
           </p>
+          <div className="mx-auto mt-8 max-w-3xl">
+            <SearchForm categories={categories} variant="hero" />
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </section>
+
+      {/* カテゴリから探す */}
+      <section className="mx-auto max-w-6xl px-4 py-12">
+        <h2 className="text-xl font-bold text-slate-900">カテゴリから探す</h2>
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {categories.map((c) => (
+            <Link
+              key={c.id}
+              href={`/stores?category=${c.slug}`}
+              className="flex flex-col items-center gap-1.5 rounded-xl border border-slate-200 bg-white p-4 text-center shadow-sm transition hover:-translate-y-0.5 hover:border-orange-300 hover:shadow"
+            >
+              <span className="text-3xl">
+                {CATEGORY_EMOJI[c.slug] ?? "🏬"}
+              </span>
+              <span className="text-sm font-bold text-slate-800">{c.name}</span>
+              <span className="text-xs text-slate-500">
+                {c._count.stores}件
+              </span>
+            </Link>
+          ))}
         </div>
-      </main>
+      </section>
+
+      {/* 人気ランキング */}
+      <section className="bg-white py-12">
+        <div className="mx-auto max-w-6xl px-4">
+          <div className="flex items-end justify-between">
+            <h2 className="text-xl font-bold text-slate-900">
+              🏆 人気ランキング
+            </h2>
+            <Link
+              href="/ranking"
+              className="text-sm font-medium text-orange-600 hover:underline"
+            >
+              ランキングをもっと見る →
+            </Link>
+          </div>
+          <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {topRated.map((store, i) => (
+              <StoreCard key={store.id} store={store} rank={i + 1} />
+            ))}
+          </div>
+          {topRated.length === 0 && (
+            <p className="mt-5 text-sm text-slate-500">
+              まだ口コミのある店舗がありません。
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* 新着店舗 */}
+      <section className="mx-auto max-w-6xl px-4 py-12">
+        <div className="flex items-end justify-between">
+          <h2 className="text-xl font-bold text-slate-900">🆕 新着店舗</h2>
+          <Link
+            href="/stores?sort=new"
+            className="text-sm font-medium text-orange-600 hover:underline"
+          >
+            すべて見る →
+          </Link>
+        </div>
+        <div className="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {newest.map((store) => (
+            <StoreCard key={store.id} store={store} />
+          ))}
+        </div>
+      </section>
+
+      {/* 新着口コミ */}
+      <section className="bg-white py-12">
+        <div className="mx-auto max-w-6xl px-4">
+          <h2 className="text-xl font-bold text-slate-900">💬 新着の口コミ</h2>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            {recentReviews.map((review) => (
+              <Link
+                key={review.id}
+                href={`/stores/${review.store.id}`}
+                className="rounded-xl border border-slate-200 bg-slate-50 p-4 transition hover:border-orange-300"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-orange-700">
+                    {review.store.name}
+                  </span>
+                  <RatingStars rating={review.rating} size="sm" />
+                </div>
+                <p className="mt-2 text-sm font-bold text-slate-800">
+                  {review.title}
+                </p>
+                <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                  {truncate(review.body, 80)}
+                </p>
+                <p className="mt-2 text-xs text-slate-500">
+                  {review.user.name} さん・{formatDate(review.createdAt)}
+                </p>
+              </Link>
+            ))}
+          </div>
+          {recentReviews.length === 0 && (
+            <p className="mt-5 text-sm text-slate-500">
+              まだ口コミがありません。
+            </p>
+          )}
+        </div>
+      </section>
     </div>
   );
 }
